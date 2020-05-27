@@ -57,33 +57,38 @@ uint32_t _initialize_config(am_hal_iom_config_t config) {
 uint32_t _initialize_pins(uint8_t iom_instance) {
 	if(iom_instance < 6) {
 		am_bsp_iom_pins_enable(iom_instance, AM_HAL_IOM_SPI_MODE);
-		switch(iom_instance){
-			case 0: {cs_pin=AM_BSP_GPIO_IOM0_CS; break;}
-			case 1: {cs_pin=AM_BSP_GPIO_IOM1_CS; break;}
-			case 2: {cs_pin=AM_BSP_GPIO_IOM2_CS; break;}
-			case 3: {cs_pin=AM_BSP_GPIO_IOM3_CS; break;}
-			case 4: {cs_pin=AM_BSP_GPIO_IOM4_CS; break;}
-			case 5: {cs_pin=AM_BSP_GPIO_IOM5_CS; break;}
-		}
-	} else {
-		//default settings: IO Module 1
-		am_hal_gpio_pinconfig(AM_BSP_GPIO_IOM1_SCK,  g_AM_BSP_GPIO_IOM1_SCK);
-		am_hal_gpio_pinconfig(AM_BSP_GPIO_IOM1_MISO, g_AM_BSP_GPIO_IOM1_MISO);
-		am_hal_gpio_pinconfig(AM_BSP_GPIO_IOM1_MOSI, g_AM_BSP_GPIO_IOM1_MOSI);
-		//use A11 as the CS
-		am_hal_gpio_pincfg_t g_AM_BSP_GPIO_IOM1_CS_11 =
-		{
-		    .uFuncSel            = AM_HAL_PIN_11_NCE11,
-		    .eDriveStrength      = AM_HAL_GPIO_PIN_DRIVESTRENGTH_12MA,
-		    .eGPOutcfg           = AM_HAL_GPIO_PIN_OUTCFG_PUSHPULL,
-		    .eGPInput            = AM_HAL_GPIO_PIN_INPUT_NONE,
-		    .eIntDir             = AM_HAL_GPIO_PIN_INTDIR_LO2HI,
-		    .uIOMnum             = 1,
-		    .uNCE                = 0,
-		    .eCEpol              = AM_HAL_GPIO_PIN_CEPOL_ACTIVELOW
-		};
-		am_hal_gpio_pinconfig(11,   g_AM_BSP_GPIO_IOM1_CS_11);
-		cs_pin = 11;
+	// 	switch(iom_instance){
+	// 		case 0: {cs_pin=AM_BSP_GPIO_IOM0_CS; break;}
+	// 		case 1: {cs_pin=AM_BSP_GPIO_IOM1_CS; break;}
+	// 		case 2: {cs_pin=AM_BSP_GPIO_IOM2_CS; break;}
+	// 		case 3: {cs_pin=AM_BSP_GPIO_IOM3_CS; break;}
+	// 		case 4: {cs_pin=AM_BSP_GPIO_IOM4_CS; break;}
+	// 		case 5: {cs_pin=AM_BSP_GPIO_IOM5_CS; break;}
+	// 	}
+	// } else {
+	// 	//default settings: IO Module 1
+	// 	am_hal_gpio_pinconfig(AM_BSP_GPIO_IOM1_SCK,  g_AM_BSP_GPIO_IOM1_SCK);
+	// 	am_hal_gpio_pinconfig(AM_BSP_GPIO_IOM1_MISO, g_AM_BSP_GPIO_IOM1_MISO);
+	// 	am_hal_gpio_pinconfig(AM_BSP_GPIO_IOM1_MOSI, g_AM_BSP_GPIO_IOM1_MOSI);
+	// 	//use A11 as the CS
+	// 	am_hal_gpio_pincfg_t g_AM_BSP_GPIO_IOM1_CS_11 =
+	// 	{
+	// 	    .uFuncSel            = AM_HAL_PIN_11_NCE11,
+	// 	    .eDriveStrength      = AM_HAL_GPIO_PIN_DRIVESTRENGTH_12MA,
+	// 	    .eGPOutcfg           = AM_HAL_GPIO_PIN_OUTCFG_PUSHPULL,
+	// 	    .eGPInput            = AM_HAL_GPIO_PIN_INPUT_NONE,
+	// 	    .eIntDir             = AM_HAL_GPIO_PIN_INTDIR_LO2HI,
+	// 	    .uIOMnum             = 1,
+	// 	    .uNCE                = 0,
+	// 	    .eCEpol              = AM_HAL_GPIO_PIN_CEPOL_ACTIVELOW
+	// 	};
+	// 	am_hal_gpio_pinconfig(11,   g_AM_BSP_GPIO_IOM1_CS_11);
+	// 	cs_pin = 11;
+
+		// https://github.com/sparkfun/Arduino_Apollo3/issues/9#issuecomment-625840459
+	 	am_hal_gpio_pinconfig(23, g_AM_HAL_GPIO_OUTPUT);
+	 	cs_pin = 23;
+		return 0;
 	}
 
 	//init dummies
@@ -213,4 +218,3 @@ void spi_cs_set() {
 void spi_cs_clear() {
 	am_hal_gpio_state_write(cs_pin, AM_HAL_GPIO_OUTPUT_CLEAR);
 }
-

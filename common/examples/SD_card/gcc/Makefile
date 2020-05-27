@@ -113,12 +113,12 @@ else
 endif
 
 ifeq ($(COM_PORT),)
-    COM_PORT=COM4
-    $(warning warning: you have not defined COM_PORT. Assuming it is COM4)
+    COM_PORT=COM7
+    $(warning warning: you have not defined COM_PORT. Assuming it is COM7)
 endif
 ifeq ($(PYTHON3),)
-    PYTHON3=python3
-    $(warning warning: you have not defined PYTHON3. assuming it is accessible by 'python3')
+    PYTHON3=python
+    $(warning warning: you have not defined PYTHON3. assuming it is accessible by 'python')
 endif
 ifeq ($(ASB_UPLOAD_BAUD),)
     ASB_UPLOAD_BAUD=115200

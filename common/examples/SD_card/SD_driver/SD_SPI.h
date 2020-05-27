@@ -21,7 +21,7 @@
 //!
 //! default settings:
 //! IO Module 1
-//! CS: A11
+//! CS: 23 (was A11)
 //! SCK: 8
 //! MOSI: 10
 //! MISO: 9

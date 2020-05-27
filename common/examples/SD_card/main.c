@@ -29,7 +29,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 
-#include "am_mcu_apollo.h"
+#include "am_mcu_apollo.h" // includes am_hal_iom.h for am_hal_iom_nonblocking_transfer
 #include "am_bsp.h"
 #include "am_util.h"
 #include "SD_driver/ffconf.h"
@@ -73,7 +73,7 @@ main(void)
 	// SCK: 5
 	// MOSI: 7
 	// MISO: 6
-	// CS: 11
+	// CS: 23 (was 11)
 	// see am_bsp.c for specific boards and IO Module numbers
 	am_util_stdio_printf("SPI init...\n");
 	if(spi_initialize_instance(0) != 0) {
