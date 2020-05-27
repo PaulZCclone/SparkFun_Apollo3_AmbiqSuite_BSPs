@@ -65,6 +65,21 @@ main(void)
 	// Configure the board for low power operation.
 	am_bsp_low_power_init();
 
+	//
+	// Enable the XT for the RTC.
+	//
+	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_XTAL_START, 0);
+
+	//
+	// Select XT for RTC clock source
+	//
+	am_hal_rtc_osc_select(AM_HAL_RTC_OSC_XT);
+
+	//
+	// Enable the RTC.
+	//
+	am_hal_rtc_osc_enable();
+
 	//enable uart printf functionality
 	am_bsp_uart_printf_enable();
 
@@ -73,13 +88,14 @@ main(void)
 	// SCK: 5
 	// MOSI: 7
 	// MISO: 6
-	// CS: 23 (was 11)
+	// CS: 23 (spi_initialize_instance defaults to 11)
 	// see am_bsp.c for specific boards and IO Module numbers
 	am_util_stdio_printf("SPI init...\n");
 	if(spi_initialize_instance(0) != 0) {
 		am_util_stdio_printf("SPI init error!\n");
 		return 1;
 	}
+	spi_cs_pin_set(23); //Change CS pin from 11 to 23
 	am_util_stdio_printf("SPI Ready!\n");
 	am_util_delay_ms(1000);
 
@@ -109,7 +125,7 @@ main(void)
 	if(fr)
 	{
 		am_util_stdio_printf("\nError mounting file system\r\n");
-		am_util_stdio_printf("mounting: %d\n", fr);
+		am_util_stdio_printf("mounting: FRESULT %d\n", fr);
 		for(;;){}
 	}
 	am_util_stdio_printf("Filesystem ready.\n", fr);
@@ -120,13 +136,15 @@ main(void)
 	if(fr)
 	{
 		am_util_stdio_printf("\nError opening text file\r\n");
-		am_util_stdio_printf("opening: %d\n", fr);
+		am_util_stdio_printf("opening: FRESULT %d\n", fr);
 		for(;;){}
 	}
 	am_util_stdio_printf("Test.csv opened.\n");
 
 	// write relatively big chunks
 	#define WRITE_LENGTH (16*512)
+	#define NUM_WRITES 128
+
 	// define the output buffer
 	uint8_t write_buf[WRITE_LENGTH] = {0};
 	// fill with data...
@@ -136,14 +154,35 @@ main(void)
 	}
 	//write data to the csv file
 	am_util_stdio_printf("Writing data...\n");
-	fr = f_write(&fil, write_buf, WRITE_LENGTH, &bw);
+	am_hal_rtc_time_t hal_time__start;
+	am_hal_rtc_time_t hal_time__end;
+	am_hal_rtc_time_get(&hal_time__start);
+	for (int i = 0; i < NUM_WRITES; i++)
+	{
+		fr = f_write(&fil, write_buf, WRITE_LENGTH, &bw);
+		if (fr > 0) break;
+	}
+	am_hal_rtc_time_get(&hal_time__end);
 	if(fr)
 	{
 		am_util_stdio_printf("\nError write text file\r\n");
-		am_util_stdio_printf("write: %d\n", fr);
+		am_util_stdio_printf("write: FRESULT %d\n", fr);
 		for(;;){}
 	}
 	am_util_stdio_printf("Write finished successfully.\n");
+	uint32_t start_centis = (hal_time__start.ui32Second * 100) + hal_time__start.ui32Hundredths;
+	uint32_t end_centis = (hal_time__end.ui32Second * 100) + hal_time__end.ui32Hundredths;
+	uint32_t duration;
+	if (end_centis < start_centis) //Did we span a minute?
+	{
+		duration = end_centis + 6000 - start_centis;
+	}
+	else
+	{
+		duration = end_centis - start_centis;
+	}
+	duration = duration * 10; //Convert to millis
+	am_util_stdio_printf("Wrote %d * %d bytes in %i millis (to the nearest 10!)\n", NUM_WRITES, WRITE_LENGTH, duration);
 
 	//close the file
 	fr = f_close(&fil);
@@ -151,10 +190,10 @@ main(void)
 	if(fr)
 	{
 		am_util_stdio_printf("\nError close text file\r\n");
-		am_util_stdio_printf("close: %d\n", fr);
+		am_util_stdio_printf("close: FRESULT %d\n", fr);
 		for(;;){}
 	}
-	am_util_stdio_printf("test.csv closed\n");
+	am_util_stdio_printf("Test.csv closed\n");
 
 	//re-open it for reading
 	am_util_stdio_printf("Re-open Test.csv file...\n");
@@ -162,7 +201,7 @@ main(void)
 	if(fr)
 	{
 		am_util_stdio_printf("\nError opening text file: read\r\n");
-		am_util_stdio_printf("opening: %d\n", fr);
+		am_util_stdio_printf("opening: FRESULT %d\n", fr);
 		for(;;){}
 	}
 	am_util_stdio_printf("Test.csv opened.\n");
@@ -171,28 +210,48 @@ main(void)
 	uint8_t read_buff[WRITE_LENGTH] = {0};
 	// read file content
 	am_util_stdio_printf("Reading data...\n");
-	fr = f_read(&fil, read_buff, WRITE_LENGTH, &bw);
+	am_hal_rtc_time_get(&hal_time__start);
+	for (int i = 0; i < NUM_WRITES; i++)
+	{
+		fr = f_read(&fil, read_buff, WRITE_LENGTH, &bw);
+		if (fr > 0) break;
+	}
+	am_hal_rtc_time_get(&hal_time__end);
 	if(fr)
 	{
 		am_util_stdio_printf("\nError reading text file\r\n");
-		am_util_stdio_printf("read: %d\n", fr);
+		am_util_stdio_printf("f_read: FRESULT %d", fr);
+		am_util_stdio_printf("\t\tattempted to read %d bytes", WRITE_LENGTH);
+		am_util_stdio_printf("\t\t%d bytes read\n", bw);
 		for(;;){}
 	}
 	am_util_stdio_printf("Data read successfully\n");
-
-	am_util_stdio_printf("Data:\n");
-	for(int i=0; i<WRITE_LENGTH; i++) {
-		am_util_stdio_printf("%c",read_buff[i]);
+	start_centis = (hal_time__start.ui32Second * 100) + hal_time__start.ui32Hundredths;
+	end_centis = (hal_time__end.ui32Second * 100) + hal_time__end.ui32Hundredths;
+	if (end_centis < start_centis) //Did we span a minute?
+	{
+		duration = end_centis + 6000 - start_centis;
 	}
-	am_util_stdio_printf("\n");
+	else
+	{
+		duration = end_centis - start_centis;
+	}
+	duration = duration * 10; //Convert to millis
+	am_util_stdio_printf("Read %d * %d bytes in %i millis (to the nearest 10!)\n", NUM_WRITES, WRITE_LENGTH, duration);
+
+	// am_util_stdio_printf("Data:\n");
+	// for(int i=0; i<WRITE_LENGTH; i++) {
+	// 	am_util_stdio_printf("%c",read_buff[i]);
+	// }
+	// am_util_stdio_printf("\n");
 
 	am_util_stdio_printf("Closing file...\n");
 	fr = f_close(&fil);
 	if(fr)
 	{
 		am_util_stdio_printf("\nError close text file\r\n");
-		am_util_stdio_printf("close: %d\n", fr);
+		am_util_stdio_printf("close: FRESULT %d\n", fr);
 		for(;;){}
 	}
-	am_util_stdio_printf("test.csv closed\n");
+	am_util_stdio_printf("Test.csv closed\n");
 }
